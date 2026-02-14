@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Price Predictor - Amazon & Flipkart</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                    <rect width="40" height="40" rx="8" fill="#6366f1"/>
+                    <path d="M20 10L28 18L20 26L12 18L20 10Z" fill="white"/>
+                    <path d="M20 18L25 23L20 28L15 23L20 18Z" fill="#c7d2fe"/>
+                </svg>
+                <span>Smart Price Predictor</span>
+            </div>
+            <div class="header-subtitle">AI-Powered Price Forecasting for Amazon & Flipkart</div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section class="input-section">
+                <div class="card">
+                    <h2>Paste Product Link</h2>
+                    <p class="subtitle">Enter an Amazon/Flipkart/Myntra URL or type a product name</p>
+                    
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="productUrl" 
+                            class="url-input" 
+                            placeholder="Paste URL or type product name (e.g., iPhone 15 128GB)"
+                        >
+                        <button id="analyzeBtn" class="btn-primary">
+                            <span class="btn-text">Analyze Price</span>
+                            <span class="btn-loader" style="display: none;">
+                                <div class="spinner"></div>
+                            </span>
+                        </button>
+                    </div>
+
+                    <div class="example-links">
+                        <p>Example links:</p>
+                        <button class="example-btn" data-url="https://www.amazon.in/Apple-iPhone-15-128-GB/dp/B0CHX1W1XY">
+                            Amazon: iPhone 15
+                        </button>
+                        <button class="example-btn" data-url="https://www.flipkart.com/samsung-galaxy-s24-ultra-5g/p/itm123456">
+                            Flipkart: Samsung Galaxy
+                        </button>
+                    </div>
+
+                    <div id="errorMessage" class="error-message" style="display: none;"></div>
+                </div>
+            </section>
+
+            <!-- Product Info Section -->
+            <section id="productInfo" class="product-section" style="display: none;">
+                <div class="card product-card">
+                    <div class="product-header">
+                        <img id="productImage" src="" alt="Product" class="product-image">
+                        <div class="product-details">
+                            <h3 id="productName">Loading...</h3>
+                            <div class="product-meta">
+                                <span id="productSource" class="source-badge">Amazon</span>
+                                <span id="productCategory" class="category-badge">Electronics</span>
+                            </div>
+                            <div class="current-price-display">
+                                <span class="price-label">Current Price:</span>
+                                <span id="currentPrice" class="price-value">&#8377;0.00</span>
+                            </div>
+                            <div id="marketplacePrices" class="marketplace-prices"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" style="display: none;">
+                <div class="results-grid">
+                    <!-- Recommendation Card -->
+                    <div class="card recommendation-card">
+                        <div id="recommendationContent">
+                            <!-- Will be filled dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Price Predictions Card -->
+                    <div class="card predictions-card">
+                        <h3>📊 Price Predictions</h3>
+                        <div class="predictions-list" id="predictionsList">
+                            <!-- Will be filled dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Price Chart Card -->
+                    <div class="card chart-card">
+                        <h3>📈 Price Trend Analysis</h3>
+                        <canvas id="priceChart"></canvas>
+                    </div>
+
+                    <!-- Statistics Card -->
+                    <div class="card stats-card">
+                        <h3>📉 Price Statistics</h3>
+                        <div id="statsContent">
+                            <!-- Will be filled dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How It Works Section -->
+            <section class="info-section">
+                <div class="card">
+                    <h3>🤖 How It Works</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-number">1</div>
+                            <div class="info-content">
+                                <h4>Paste Link</h4>
+                                <p>Copy any Amazon, Flipkart, or Myntra product URL and paste it above</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-number">2</div>
+                            <div class="info-content">
+                                <h4>AI Analysis</h4>
+                                <p>Our ML model analyzes historical price data and trends</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-number">3</div>
+                            <div class="info-content">
+                                <h4>Get Prediction</h4>
+                                <p>Receive smart buying recommendations and price forecasts</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-number">4</div>
+                            <div class="info-content">
+                                <h4>Save Money</h4>
+                                <p>Buy at the right time and save on your purchases</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with ❤️ using Machine Learning | <a href="#" id="aboutLink">About</a> | <a href="#" id="apiLink">API Docs</a></p>
+        </footer>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2>About Smart Price Predictor</h2>
+            <p>This tool uses advanced machine learning algorithms to predict future product prices based on historical data patterns.</p>
+            <h3>Features:</h3>
+            <ul>
+                <li>Linear Regression price forecasting</li>
+                <li>Support for Amazon & Flipkart</li>
+                <li>7, 15, and 30-day predictions</li>
+                <li>Smart buy/wait recommendations</li>
+                <li>Category-based fallback predictions</li>
+            </ul>
+            <p class="disclaimer"><strong>Disclaimer:</strong> Predictions are based on historical data and machine learning models. Actual prices may vary. This is a hackathon project for educational purposes.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
