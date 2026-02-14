@@ -106,12 +106,12 @@ def main():
         }
     ]
     
-    print("\n📝 Note: Web scraping may fail due to:")
-    print("   - Anti-bot protection")
-    print("   - Rate limiting")
-    print("   - Network issues")
-    print("\nIf scraping fails, the system will show an error message.")
-    print("This is expected behavior for a hackathon demo!")
+    # print("\n📝 Note: Web scraping may fail due to:")
+    # print("   - Anti-bot protection")
+    # print("   - Rate limiting")
+    # print("   - Network issues")
+    # print("\nIf scraping fails, the system will show an error message.")
+    # print("This is expected behavior for a hackathon demo!")
     
     input("\n Press Enter to start testing... ")
     
@@ -127,12 +127,12 @@ def main():
     
     if successful == 0:
         print("\n⚠️  Web scraping blocked by Amazon/Flipkart")
-        print("\nThis is normal! For hackathon demo:")
-        print("   1. Use the mock data in script.js")
-        print("   2. Or explain: 'In production, we'd use official APIs'")
-        print("   3. Show the intelligent prediction algorithm instead")
+        # print("\nThis is normal! For hackathon demo:")
+        # print("   1. Use the mock data in script.js")
+        # print("   2. Or explain: 'In production, we'd use official APIs'")
+        # print("   3. Show the intelligent prediction algorithm instead")
     else:
-        print("\n✓ System working! Ready for demo!")
+        print("\n✓ System is Ready!")
 
 if __name__ == "__main__":
     main()

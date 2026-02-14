@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 import re
 import traceback
 import random
-from urllib.parse import quote, quote_plus
+from urllib.parse import quote, quote_plus, urlparse, unquote
 
 app = Flask(__name__)
 CORS(app)
@@ -381,6 +381,53 @@ class PriceScraper:
             'flipkart': PriceScraper.scrape_search_price(product_name, 'flipkart')
         }
 
+    @staticmethod
+    def infer_product_name_from_url(url, source):
+        """Infer product name from URL slug when scraper title is unavailable."""
+        try:
+            parsed = urlparse(url)
+            segments = [s for s in parsed.path.split('/') if s]
+
+            def prettify(segment):
+                clean = unquote(segment or '')
+                clean = re.sub(r'[^a-zA-Z0-9\-\+ ]', ' ', clean)
+                clean = clean.replace('-', ' ').replace('+', ' ')
+                clean = re.sub(r'\s+', ' ', clean).strip()
+                if not clean:
+                    return None
+                return " ".join(word.capitalize() for word in clean.split())
+
+            if source == 'amazon':
+                if 'dp' in segments:
+                    dp_index = segments.index('dp')
+                    if dp_index > 0:
+                        return prettify(segments[dp_index - 1])
+                if 'gp' in segments and 'product' in segments:
+                    gp_index = segments.index('gp')
+                    if gp_index > 0:
+                        return prettify(segments[gp_index - 1])
+
+            if source == 'flipkart':
+                if 'p' in segments:
+                    p_index = segments.index('p')
+                    if p_index > 0:
+                        return prettify(segments[p_index - 1])
+
+            if source == 'myntra':
+                for segment in segments:
+                    if segment.lower() != 'buy' and not segment.isdigit():
+                        return prettify(segment)
+
+            for segment in segments:
+                if segment.lower() not in {'dp', 'gp', 'product', 'p', 'buy', 'd'} and not segment.isdigit():
+                    name = prettify(segment)
+                    if name:
+                        return name
+        except Exception:
+            return None
+
+        return None
+
 # ==========================================
 # SMART PRODUCT MATCHING
 # ==========================================
@@ -417,11 +464,23 @@ class SmartMatcher:
         stop_words = {
             'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
             'with', 'without', 'by', 'from', 'best', 'price', 'online',
-            'storage', 'ram', 'gb', 'tb', 'inch', 'cm', 'mm', 'new'
+            'storage', 'ram', 'gb', 'tb', 'inch', 'cm', 'mm', 'new',
+            'amazon', 'flipkart', 'myntra', 'product', 'india', 'buy'
         }
         words = SmartMatcher.normalize_text(product_name).split()
         keywords = [w for w in words if w not in stop_words and len(w) > 2]
         return keywords
+
+    @staticmethod
+    def is_generic_product_name(product_name):
+        """Detect placeholder names that should not drive model matching."""
+        normalized = SmartMatcher.normalize_text(product_name)
+        return normalized in {
+            'amazon product',
+            'flipkart product',
+            'myntra product',
+            'product'
+        }
     
     @staticmethod
     def find_similar_products(product_name, df, top_n=10, min_score=2.0):
@@ -619,6 +678,11 @@ def analyze_product():
         # Prefer scraped title for frontend display
         if scraped_title:
             product_name = scraped_title
+        elif url and source in ['amazon', 'flipkart', 'myntra'] and SmartMatcher.is_generic_product_name(product_name):
+            inferred_name = PriceScraper.infer_product_name_from_url(url, source)
+            if inferred_name:
+                print(f"Inferred product name from URL: {inferred_name}")
+                product_name = inferred_name
 
         # If input is a product name, fetch both marketplace prices
         if source == 'query':
@@ -629,6 +693,16 @@ def analyze_product():
             other_source = 'flipkart' if source == 'amazon' else 'amazon'
             if marketplace_prices.get(other_source) is None:
                 marketplace_prices[other_source] = PriceScraper.scrape_search_price(product_name, other_source)
+
+        observed_market_prices = [
+            p for p in marketplace_prices.values()
+            if isinstance(p, (int, float)) and p > 0
+        ]
+        target_price_for_fallback = (
+            float(scraped_price)
+            if isinstance(scraped_price, (int, float)) and scraped_price > 0
+            else (float(np.mean(observed_market_prices)) if observed_market_prices else None)
+        )
         
         # STEP 2: Find similar products in dataset
         similar_products = SmartMatcher.find_similar_products(product_name, DF_CLEAN, top_n=5)
@@ -640,25 +714,29 @@ def analyze_product():
             model_info = get_or_train_model(matched_product)
             model_source = 'similar_product'
         else:
-            # STEP 3: Fallback to category-based prediction
-            print("No similar products found, using category average")
-            category = SmartMatcher.get_category_from_name(product_name)
-            model_info = get_or_train_category_model(category, target_price=scraped_price)
-            if scraped_price:
-                matched_product = f"{category.title()} Category (price-bucketed)"
-                model_source = 'category_price_bucket'
+            # STEP 3: Fallback to nearest-price product, then category-based prediction
+            nearest_product = get_nearest_product_by_price(target_price_for_fallback)
+            if nearest_product:
+                print(f"No text match. Using nearest-price product model: {nearest_product}")
+                matched_product = nearest_product
+                model_info = get_or_train_model(matched_product)
+                model_source = 'price_nearest_product'
             else:
-                matched_product = f"{category.title()} Category"
-                model_source = 'category'
+                print("No similar products found, using category average")
+                category = SmartMatcher.get_category_from_name(product_name)
+                model_info = get_or_train_category_model(category, target_price=scraped_price)
+                if scraped_price:
+                    matched_product = f"{category.title()} Category (price-bucketed)"
+                    model_source = 'category_price_bucket'
+                else:
+                    matched_product = f"{category.title()} Category"
+                    model_source = 'category'
         
         product_data = model_info['data']
         model = model_info['model']
         
         # STEP 4: Determine current price
-        available_market_prices = [
-            p for p in marketplace_prices.values()
-            if isinstance(p, (int, float)) and p > 0
-        ]
+        available_market_prices = observed_market_prices
 
         if scraped_price:
             current_price = scraped_price
@@ -851,6 +929,18 @@ def get_or_train_category_model(category, target_price=None):
     
     CATEGORY_MODELS_CACHE[cache_key] = model_info
     return model_info
+
+def get_nearest_product_by_price(target_price):
+    """Find dataset product whose mean price is nearest to target price."""
+    if target_price is None or target_price <= 0 or DF_CLEAN is None or len(DF_CLEAN) == 0:
+        return None
+
+    product_means = DF_CLEAN.groupby('product_name')['price'].mean()
+    if len(product_means) == 0:
+        return None
+
+    nearest_name = (product_means - target_price).abs().idxmin()
+    return nearest_name
 
 def calculate_volatility(prices):
     """Calculate price volatility."""
