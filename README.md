@@ -2,8 +2,6 @@
 
 An intelligent price prediction system for Amazon & Flipkart products using Machine Learning. Predicts future prices and recommends the best time to buy!
 
-![Demo](https://via.placeholder.com/800x400?text=Smart+Price+Predictor)
-
 ## 🌟 Features
 
 - ✅ **Smart URL Parsing** - Paste any Amazon/Flipkart product link
